@@ -8,11 +8,11 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json()); // req.body
 const PORT = process.env.PORT || 3000;
 
-const {jwtAuthMiddleware} = require('./jwt');
+// const {jwtAuthMiddleware} = require('./jwt');
 
 // import the router files
 const userRoutes = require('./routes/userRoutes');
-const candidateRoutes = require('./../routes/candidateRoutes');
+const candidateRoutes = require('./routes/candidateRoutes');
 
 // use the routers
 app.use('/user' , userRoutes);

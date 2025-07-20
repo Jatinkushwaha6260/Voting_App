@@ -3,10 +3,22 @@ const router = express.Router();
 const User = require('./../models/user');
 const {jwtAuthMiddleware , generateToken} = require('./../jwt');
 
+
 // Signup route by post method
 router.post('/signup' , async (req , res) => {
     try{
-        const data = req.body; // Assuming the request body contains the user data
+         
+     const data = req.body; // Assuming the request body contains the user data
+
+       // Check double admin user is  not allow
+        if (data.role === 'admin') {
+            const existingAdmin = await User.findOne({ role: 'admin' });
+
+            if (existingAdmin) {
+                return res.status(400).json({ error: 'Admin already exists' });
+            }
+        }
+
 
         // Create a new user document using the mongoose model
         const newUser = new User(data);
@@ -65,7 +77,7 @@ router.post('/login' , async (req , res) => {
 });
 
 // Profile route by get method
-router.get('/profile' , async (req , res) => {
+router.get('/profile' , jwtAuthMiddleware ,async (req , res) => {
     try{
     const userData = req.user;
     const userId = userData.id;
@@ -79,7 +91,7 @@ router.get('/profile' , async (req , res) => {
 });
 
 // Profile password change route by put method
-router.put('/profile/password' , async (req , res) => {
+router.put('/profile/password' , jwtAuthMiddleware , async (req , res) => {
     try{
         const userId = req.user; // Extract the id from the token
         const {currentPassword , newPassword}  = req.body; // Extract current and new passwords from the request body

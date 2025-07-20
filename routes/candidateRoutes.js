@@ -1,14 +1,27 @@
 const express = require('express');
 const router = express.Router();
+const User = require('./../models/user');
 const Candidate = require('./../models/candidate');
 const {jwtAuthMiddleware , generateToken} = require('./../jwt');
 
-const checkAdminRole = 
-
-
-// Post route to add a candidate
-router.post('/' , async (req , res) => {
+const checkAdminRole = async (userId) => {
     try{
+        const user = await User.findById(userId);
+        return user.role === 'admin';
+
+    }catch(err){
+        return false;
+
+    }
+}
+
+
+//   Add candidate By Post method
+router.post('/' , jwtAuthMiddleware , async (req , res) => {
+    try{
+        if(! await checkAdminRole(req.user.id))
+            return res.status(403).json({message: 'user does not have admin role'});
+
         const data = req.body; // Assuming the request body contains the candidate data
 
         // Create a new candidate document using the mongoose model
@@ -28,30 +41,29 @@ router.post('/' , async (req , res) => {
       
 });
 
-// Login route by post method
-router.post('/login' , async (req , res) => {
+
+
+// Update candidate By Put method
+router.put('/:candidateId' , jwtAuthMiddleware , async (req , res) => {
     try{
-        // Extract aadharCardNumber and password fron request body
-        const {aadharCardNumber , password}  = req.body;
+         if(!checkAdminRole(req.user.id))
+            return res.status(403).json({message: 'user does not have admin role'});
 
-        // Find the user by aadharCardNumber
-        const user = await User.findOne({aadharCardNumber: aadharCardNumber});
+         const candidateId = req.params.candidateId; // Extract the id from the URL parameter
+         const updatedCandidateData = req.body; // Updated data for the candidate
+         const response = await Candidate.findByIdAndUpdate(candidateId , updatedCandidateData , {
+            new: true, // Return the updated document
+            runValidators: true // Run mongoose validation
+         })
 
-        // If user does not exist or password does not match , return error
-        if(!user || !(await user.comparePassword(password))){
-            return res.status(401).json({error: 'Invalid user or  password'});
-        }
+         if(!response){
+            return res.status(403).json({message: 'candidate not found'});
+         }
 
-        // generate token
-        const payload = {
-            id: user.id
-        }
-        const token = generateToken(payload);
+         console.log('candidate data updated');
+         res.status(200).json(response);
 
-        // return token as response
-        res.json({token});
-
-
+        
     }catch(err){
         console.log(err);
         res.status(500).json({error: 'Internal server error'});
@@ -59,46 +71,30 @@ router.post('/login' , async (req , res) => {
     }
 });
 
-// Profile route by get method
-router.get('/profile' , async (req , res) => {
+
+// Delete candidate By Delete method
+router.delete('/:candidateId' , jwtAuthMiddleware , async (req , res) => {
     try{
-    const userData = req.user;
-    const userId = userData.id;
-    const user = await User.findById(userId);
-    res.status(200).json({user});
+    if(!checkAdminRole(req.user.id))
+            return res.status(403).json({message: 'user does not have admin role'});
+
+    const candidateId = req.params.candidateId; // Extract the id from the URL parameter
+    const response = await Candidate.findByIdAndDelete(candidateId);
+
+    if(!response){
+        return res.status(403).json({message: 'candidate not found'});
+    }
+
+    console.log('candidate deleted');
+    res.status(200).json({response: 'candidate deleted'});
+
 }catch(err){
     console.log(err);
-    res.status(500).json({error: 'Internal server error'});
-
+        res.status(500).json({error: 'Internal server error'});
 }
 });
 
-// Profile password change route by put method
-router.put('/profile/password' , async (req , res) => {
-    try{
-        const userId = req.user; // Extract the id from the token
-        const {currentPassword , newPassword}  = req.body; // Extract current and new passwords from the request body
-
-        // find the user by userId
-        const user = await User.findById(userId);
-        
-        // If password does not match , return error
-        if(!(await user.comparePassword(currentPassword))){
-            return res.status(401).json({error: 'password does not match'})
-        }
-
-        // update the user's password
-        user.password = newPassword;
-        await user.save();
-        console.log('password updated');
-        res.status(200).json({message: 'password updated'});
-
-    }catch(err){
-        console.log(err);
-        res.status(500).json({error: 'Internal server error'});
-
-    }
-});
+// Let's started voting
 
 
 
