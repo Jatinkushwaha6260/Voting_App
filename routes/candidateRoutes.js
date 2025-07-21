@@ -165,6 +165,34 @@ router.get('/vote/count' , async (req , res) => {
 });
 
 
+// Find list of candidate by get method
+router.get('/' , async (req , res) => {
+    try{
+        // Find all candidates
+        const candidate = await Candidate.find();
+
+        if(!candidate){
+            return res.status(404).json({message: 'candidates not present'});
+        }
+
+         // Map the candidates to only return their name and party_name
+         const candidateData = candidate.map((data) => {
+            return {
+                name: data.name,
+                party: data.party
+
+            }
+         });
+
+         return res.status(200).json(candidateData);
+
+    }catch(err){
+        console.log(err);
+        res.status(500).json({error: 'Internal server error'});
+
+    }
+});
+
 
 
 module.exports = router;
